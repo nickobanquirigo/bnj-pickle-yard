@@ -29,7 +29,7 @@ const LOGO_URI = "data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BS
 
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
 const COURTS = ["Court 1", "Court 2", "Court 3"];
-const HOURS = Array.from({ length: 15 }, (_, i) => i + 6);
+const HOURS = Array.from({ length: 19 }, (_, i) => i + 6);
 const fmt = (h) => (h < 12 ? `${h}:00 AM` : h === 12 ? `12:00 PM` : `${h - 12}:00 PM`);
 const TODAY = new Date().toISOString().split("T")[0];
 
@@ -358,7 +358,7 @@ function BookingModal({ slot, bookings, onClose, onConfirm }) {
   const rate = 150;
   const totalPrice = hours * rate;
   const conflict = hasConflict(bookings, selDate, selCourt, startHour, endHour);
-  const endHourOptions = HOURS.filter((h) => h > startHour && h <= 21);
+  {HOURS.filter(h => h < 24).map((h) => (
   const canSubmit = name.trim() && phone.trim() && !conflict && hours > 0;
 
   async function submit() {
@@ -466,7 +466,7 @@ function BookingModal({ slot, bookings, onClose, onConfirm }) {
                   <div>
                     <div style={{fontSize:".74rem",color:"var(--gray-400)",marginBottom:".3rem",fontWeight:600}}>START TIME</div>
                     <select className="form-select" value={startHour} onChange={(e) => handleStartChange(e.target.value)}>
-                      {HOURS.filter(h => h < 21).map((h) => (
+                      {HOURS.filter(h => h < 24).map((h) => (
                         <option key={h} value={h}>{fmt(h)}</option>
                       ))}
                     </select>
