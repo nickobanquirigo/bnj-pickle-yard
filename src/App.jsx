@@ -26,8 +26,8 @@ async function sendNotifications(booking) {
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const COURTS = ["Court 1", "Court 2", "Court 3"];
-const HOURS = Array.from({ length: 19 }, (_, i) => i + 6); // 6AM–12AM
-const fmt = (h) => h === 0 ? "12:00 AM" : h < 12 ? `${h}:00 AM` : h === 12 ? `12:00 PM` : h < 24 ? `${h - 12}:00 PM` : "12:00 AM";
+const HOURS = Array.from({ length: 19 }, (_, i) => i + 6); // 6AM(6) to 12AM(24)
+const fmt = (h) => (h === 0 || h === 24) ? "12:00 AM" : h < 12 ? `${h}:00 AM` : h === 12 ? "12:00 PM" : `${h - 12}:00 PM`;
 const TODAY = new Date().toISOString().split("T")[0];
 
 function getSlotStatus(bookings, date, court, hour) {
@@ -400,9 +400,9 @@ function BookingModal({ slot, bookings, onClose, onConfirm }) {
   const hours = calcHours(startHour, endHour);
   const rate = 150;
   const total = hours * rate;
-  const conflict = hasConflict(bookings, selDate, selCourt, startHour, endHour);
-  const endOptions = HOURS.filter((h) => h > startHour && h <= 24);
-  const canSubmit = name.trim() && phone.trim() && !conflict && hours > 0;
+  const conflict = endHour > startHour ? hasConflict(bookings, selDate, selCourt, startHour, endHour) : false;
+  const endOptions = [...HOURS.filter((h) => h > startHour), ...(startHour < 24 ? [24] : [])].filter(h => h <= 24 && h > startHour);
+  const canSubmit = name.trim() && phone.trim() && !conflict && hours > 0 && endHour <= 24;
 
   async function submit() {
     if (!canSubmit) return;
@@ -503,7 +503,7 @@ function BookingModal({ slot, bookings, onClose, onConfirm }) {
                   <div>
                     <div className="tr-label">Start Time</div>
                     <select className="fsel" value={startHour} onChange={(e) => handleStartChange(e.target.value)}>
-                      {HOURS.filter(h => h < 24).map((h) => (
+                      {HOURS.filter(h => h <= 23).map((h) => (
                         <option key={h} value={h}>{fmt(h)}</option>
                       ))}
                     </select>
@@ -599,7 +599,7 @@ function HomePage({ setPage, openBooking, bookings }) {
           <div className="hero-left">
             <div className="hero-pill">
               <span className="hero-pill-dot" />
-              Mutia Z.N. #1 Pickle Yard
+              Zamboanga City's #1 Pickle Yard
             </div>
             <img src={LOGO_URI} alt="BNJ Pickle Yard" className="hero-logo-img" />
             <p className="hero-tagline">
