@@ -599,7 +599,7 @@ function HomePage({ setPage, openBooking, bookings }) {
           <div className="hero-left">
             <div className="hero-pill">
               <span className="hero-pill-dot" />
-              Zamboanga City's #1 Pickle Yard
+              Mutia Z.N. #1 Pickle Yard
             </div>
             <img src={LOGO_URI} alt="BNJ Pickle Yard" className="hero-logo-img" />
             <p className="hero-tagline">
