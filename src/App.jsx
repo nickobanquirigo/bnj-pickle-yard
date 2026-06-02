@@ -31,6 +31,7 @@ const fmt = (h) => (h === 0 || h === 24) ? "12:00 AM" : h < 12 ? `${h}:00 AM` : 
 const TODAY = new Date().toISOString().split("T")[0];
 
 function getSlotStatus(bookings, date, court, hour) {
+  if (isClosedSlot(date, hour)) return "closed";
   const b = bookings.find(
     (b) => b.date === date && b.court === court && hour >= b.startHour && hour < b.endHour && b.status !== "cancelled"
   );
@@ -38,6 +39,7 @@ function getSlotStatus(bookings, date, court, hour) {
 }
 
 function hasConflict(bookings, date, court, startHour, endHour, excludeId) {
+  if (isClosedRange(date, startHour, endHour)) return true;
   return bookings.some(
     (b) => b.id !== excludeId && b.date === date && b.court === court &&
       b.status !== "cancelled" && startHour < b.endHour && endHour > b.startHour
@@ -50,6 +52,23 @@ function formatDate(dateStr) {
 }
 
 function calcHours(s, e) { return e - s; }
+
+// ─── CLOSED HOURS LOGIC ───────────────────────────────────────────────────────
+// Closed: Friday 6PM (hour 18) through Saturday 6PM (hour 18)
+function isClosedSlot(dateStr, hour) {
+  const d = new Date(dateStr + "T00:00:00");
+  const day = d.getDay(); // 0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat
+  if (day === 5 && hour >= 18) return true;  // Friday 6PM onwards
+  if (day === 6 && hour < 18) return true;   // Saturday before 6PM
+  return false;
+}
+
+function isClosedRange(dateStr, startHour, endHour) {
+  for (let h = startHour; h < endHour; h++) {
+    if (isClosedSlot(dateStr, h)) return true;
+  }
+  return false;
+}
 
 // ─── STYLES ──────────────────────────────────────────────────────────────────
 const css = `
@@ -186,6 +205,8 @@ const css = `
   .slot-available:hover{background:#dcfce7;transform:scale(1.04)}
   .slot-reserved{background:#fef2f2;color:#b91c1c;cursor:default}
   .slot-ongoing{background:#fffbeb;color:#92400e;cursor:default}
+  .slot-closed{background:#f3f4f6;color:#9ca3af;cursor:not-allowed;opacity:.7}
+  .slot-closed .sd{background:#d1d5db}
   .sd{width:5px;height:5px;border-radius:50%;flex-shrink:0}
   .slot-available .sd{background:#16a34a}
   .slot-reserved .sd{background:#ef4444}
@@ -533,7 +554,7 @@ function BookingModal({ slot, bookings, onClose, onConfirm }) {
                   </div>
                 </div>
                 {conflict ? (
-                  <div className="tr-conflict">⚠ This time range conflicts with an existing booking.</div>
+                  <div className="tr-conflict">{isClosedRange(selDate, startHour, endHour) ? "⛔ We are closed during this time. We are closed Friday 6PM – Saturday 6PM." : "⚠ This time range conflicts with an existing booking."}</div>
                 ) : hours > 0 ? (
                   <div className="tr-preview">
                     <span style={{fontSize:".83rem",fontWeight:600,color:"var(--gd)"}}>🕐 {fmt(startHour)} → {fmt(endHour)} · {hours}hr</span>
@@ -692,7 +713,7 @@ function HomePage({ setPage, openBooking, bookings }) {
             <div className="info-card">
               <div className="info-card-icon">🕐</div>
               <div className="info-card-title">Operating Hours</div>
-              {[["Mon – Fri","7:00 AM – 9:00 PM"],["Saturday","6:00 AM – 12:00 AM"],["Sunday","6:00 AM – 12:00 AM"],["Holidays","8:00 AM – 10:00 PM"]].map(([d,t]) => (
+              {[["Mon – Thu","6:00 AM – 12:00 AM"],["Saturday","6:00 PM – 12:00 AM"],["Sunday","6:00 AM – 12:00 AM"],["Holidays","6:00 AM – 12:00 AM"]].map(([d,t]) => (
                 <div className="info-row" key={d}>
                   <span className="info-row-label">{d}</span>
                   <span className="info-row-val">{t}</span>
@@ -702,7 +723,7 @@ function HomePage({ setPage, openBooking, bookings }) {
             <div className="info-card">
               <div className="info-card-icon">💰</div>
               <div className="info-card-title">Pricing</div>
-              {[["1-Hour Rental","₱150"],["2-Hour Rental","₱280"],["Half-Day (4hrs)","₱520"],["Equipment Rental","₱50/set"]].map(([d,t]) => (
+              {[["1-Hour Rental","₱150"],["2-Hour Rental","₱300"],["Half-Day (4hrs)","₱600"],["Equipment Rental","₱50/set"]].map(([d,t]) => (
                 <div className="info-row" key={d}>
                   <span className="info-row-label">{d}</span>
                   <span className="info-row-val green">{t}</span>
@@ -731,9 +752,9 @@ function HomePage({ setPage, openBooking, bookings }) {
             <div className="sec-eyebrow">Location</div>
             <h2 className="sec-title">Find Us</h2>
           </div>
-          <div className="map-box" onClick={() => window.open("https://maps.google.com","_blank")}>
+          <div className="map-box" onClick={() => window.open("https://maps.app.goo.gl/dFENWyutUXJsMiw57","_blank")}>
             <div style={{fontSize:"2.5rem"}}>📍</div>
-            <div className="map-box-title">BNJ Pickle Yard, Zamboanga City</div>
+            <div className="map-box-title">BNJ Pickle Yard, Sto. Tomas, Mutia, Zamboanga del Norte</div>
             <div className="map-box-sub">Tap to open in Google Maps</div>
             <button className="btn-hero-primary" style={{fontSize:".85rem",padding:".65rem 1.5rem"}}>Open Google Maps</button>
           </div>
@@ -750,9 +771,9 @@ function HomePage({ setPage, openBooking, bookings }) {
           </div>
           <div className="contact-grid">
             {[
-              {icon:"💬",bg:"linear-gradient(135deg,#0099ff,#a855f7)",c:"white",title:"Facebook Messenger",sub:"Message us anytime",fn:() => window.open("https://m.me/BNJPickleYard","_blank")},
+              {icon:"💬",bg:"linear-gradient(135deg,#0099ff,#a855f7)",c:"white",title:"Facebook Messenger",sub:"Message us anytime",fn:() => window.open("https://www.facebook.com/profile.php?id=100067677621032","_blank")},
               {icon:"📞",bg:"#f0fdf4",c:"#15803d",title:"Call Us",sub:"+63 915 295 3365",fn:() => window.open("tel:+639152953365")},
-              {icon:"📘",bg:"#eff6ff",c:"#1d4ed8",title:"Facebook Page",sub:"BNJ Pickle Yard",fn:() => window.open("https://facebook.com/BNJPickleYard","_blank")},
+              {icon:"📘",bg:"#eff6ff",c:"#1d4ed8",title:"Facebook Page",sub:"BNJ Pickle Yard",fn:() => window.open("https://www.facebook.com/profile.php?id=100067677621032","_blank")},
               {icon:"🏓",bg:"#f0fdf4",c:"#15803d",title:"Book Online",sub:"Reserve a court now",fn:() => openBooking()},
             ].map((c) => (
               <button key={c.title} className="contact-card" onClick={c.fn}>
@@ -811,7 +832,7 @@ function AvailabilityPage({ bookings, loading, openBooking }) {
         </div>
 
         <div className="legend">
-          {[["#16a34a","Available — tap to book"],["#ef4444","Reserved"],["#f59e0b","Ongoing"]].map(([c,l]) => (
+          {[["#16a34a","Available — tap to book"],["#ef4444","Reserved"],["#f59e0b","Ongoing"],["#d1d5db","Closed"]].map(([c,l]) => (
             <div className="legend-item" key={l}><div className="legend-dot" style={{background:c}}/>{l}</div>
           ))}
         </div>
@@ -1175,7 +1196,7 @@ export default function App() {
 
       <footer style={{background:"#0c0c0c",padding:"3rem 2rem",textAlign:"center"}}>
         <img src={LOGO_URI} alt="BNJ Pickle Yard" style={{height:70,marginBottom:"1.25rem",opacity:.9}}/>
-        <div style={{color:"rgba(255,255,255,.4)",fontSize:".875rem",marginBottom:".4rem"}}>Zamboanga City · Open 6AM – 12AM Daily</div>
+        <div style={{color:"rgba(255,255,255,.4)",fontSize:".875rem",marginBottom:".4rem"}}>Mutia, Zamboanga del Norte · Open 6AM – 12AM Sunday to Friday</div>
         <div style={{color:"rgba(255,255,255,.2)",fontSize:".78rem"}}>© 2025 BNJ Pickle Yard. All rights reserved. · Est. 2025</div>
       </footer>
     </>
